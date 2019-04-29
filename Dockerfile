@@ -1,11 +1,13 @@
 FROM python:3.7.0-alpine3.8
 
+
 EXPOSE 5000 5000
-ENV FLASK_APP /app/server.py
-CMD python -m flask run --host 0.0.0.0
+CMD python /app/server.py
 WORKDIR /app
 COPY requirements.txt requirements.txt
-RUN pip install -r requirements.txt
+RUN apk add --no-cache --virtual .build-deps gcc libffi musl-dev && \
+    pip install -r requirements.txt && \
+    apk del .build-deps
 USER 1000
 COPY templates templates
 COPY server.py server.py
