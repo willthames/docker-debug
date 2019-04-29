@@ -1,0 +1,38 @@
+<!doctype html>
+<head>
+<title>Docker Debug</title>
+<link rel="stylesheet" href="{{ url_for('static', filename=colour + '.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+{% if environs['ENABLE_BUGGY_FEATURE'] == 'True' %}
+<link rel="stylesheet" href="{{ url_for('static', filename='extras/shake.css') }}">
+{% endif %}
+</head>
+<body>
+<div class="header">
+<h1>docker debug</h1>
+</div>
+<h2>Headers</h2>
+<table>
+<thead>
+<tr><th>Header</th><th>Value</th></tr>
+</thead>
+<tbody>
+{% for item in headers | dictsort %}
+<tr><td><code>{{ item.0 }}</code></td><td><code>{{ item.1 }}</code></td></tr>
+{%- endfor %}
+</tbody>
+</table>
+
+<h2>Environment Variables</h2>
+<table>
+<thead>
+<tr><th>Environment Variable</th><th>Value</th></tr>
+</thead>
+<tbody>
+{% for item in environs | dictsort %}
+<tr><td><code>{{ item.0 }}</code></td><td><code>{{ item.1 }}</code></td></tr>
+{%- endfor %}
+</tbody>
+</table>
+</body>
+</html>
