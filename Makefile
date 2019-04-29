@@ -5,5 +5,6 @@ blue green:
 	docker build -t willthames/docker-debug:$@ .
 
 blue-push: blue
+	docker push willthames/docker-debug:$<
 green-push: green
-	docker push willthames/docker-debug:$@
+	docker push willthames/docker-debug:$<
