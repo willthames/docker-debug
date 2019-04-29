@@ -1,10 +1,14 @@
+VERSION:=$(shell git describe --long)
+
 all: blue-push green-push
 
-blue green:
+colours = blue green
+
+$(colours):
 	echo 'colour = "$@"' > colour.py
 	docker build -t willthames/docker-debug:$@ .
 
-blue-push: blue
+$(colours:%=%-push): %-push: %
 	docker push willthames/docker-debug:$<
-green-push: green
-	docker push willthames/docker-debug:$<
+	docker tag willthames/docker-debug:$< willthames/docker-debug:$<-${VERSION}
+	docker push willthames/docker-debug:$<-${VERSION}
