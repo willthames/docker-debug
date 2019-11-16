@@ -4,11 +4,15 @@
 
 from colour import colour
 import os
+import random
 from threading import Lock
+import time
 
 from flask import Flask, render_template, make_response, request, session, Blueprint
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_socketio import close_room, rooms, disconnect
+from jaeger_client import Config
+from flask_opentracing import FlaskTracing
 
 
 DEBUG = bool(os.environ.get('DEBUG', False))
@@ -25,15 +29,64 @@ bp = Blueprint('docker-debug', __name__,
                template_folder='templates',
                static_folder='static')
 
+TRACING_HOST = os.environ.get('TRACING_HOST')
+TRACING_SAMPLE_RATE = float(os.environ.get('TRACING_SAMPLE_RATE', 0))
+
+config = Config(config={'sampler': {'type': 'const', 'param': TRACING_SAMPLE_RATE},
+                        'logging': True,
+                        'local_agent':
+                        # Also, provide a hostname of Jaeger instance to send traces to.
+                        {'reporting_host': TRACING_HOST}},
+                # Service name can be arbitrary string describing this particular web service.
+                service_name="docker-debug")
+open_tracer = config.initialize_tracer()
+tracing = FlaskTracing(open_tracer)
 
 @bp.route('/')
-def docker_debug():
+@tracing.trace()
+def index():
     with open(os.environ.get("WWW_DATA", "helloworld.txt")) as f:
         data = f.read()
+    child_scope = open_tracer.start_active_span('flask_make_response')
     response = make_response(render_template('docker_debug.j2',
                                              colour=colour, data=data,
                                              environs=os.environ,
                                              headers=request.headers))
+    child_scope.close()
+    response.headers['Cache-Control'] = 'max-age=0'
+    return response
+
+
+@bp.route('/sleep/<count>')
+@tracing.trace()
+def sleep(count):
+    time.sleep(int(count))
+    child_scope = open_tracer.start_active_span('flask_make_response')
+    response = make_response(render_template('docker_debug.j2',
+                                             colour=colour,
+                                             environs=os.environ,
+                                             headers=request.headers))
+    child_scope.close()
+    response.headers['Cache-Control'] = 'max-age=0'
+    return response
+
+
+@bp.route('/random/<code>/<percent>')
+@tracing.trace()
+def random_code(code, percent):
+    if int(percent) <= random.randint(1, 100):
+        result = ("Oh No!", int(code))
+    else:
+        result= ("Yay", 200)
+    child_scope = open_tracer.start_active_span('flask_make_response')
+    response = make_response(*result)
+    child_scope.close()
+    return response
+
+
+@bp.route('/ping')
+def ping():
+    response = make_response('pong')
     response.headers['Cache-Control'] = 'max-age=0'
     return response
 
