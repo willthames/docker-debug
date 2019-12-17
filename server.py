@@ -14,7 +14,6 @@ from flask_socketio import close_room, rooms, disconnect
 from jaeger_client import Config
 from flask_opentracing import FlaskTracing
 
-
 DEBUG = bool(os.environ.get('DEBUG', False))
 
 
