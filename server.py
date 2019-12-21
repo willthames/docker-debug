@@ -34,6 +34,7 @@ TRACING_SAMPLE_RATE = float(os.environ.get('TRACING_SAMPLE_RATE', 0))
 
 config = Config(config={'sampler': {'type': 'const', 'param': TRACING_SAMPLE_RATE},
                         'logging': True,
+                        'propagation': 'b3',
                         'local_agent':
                         # Also, provide a hostname of Jaeger instance to send traces to.
                         {'reporting_host': TRACING_HOST,
@@ -48,7 +49,8 @@ tracing = FlaskTracing(open_tracer)
 def index():
     with open(os.environ.get("WWW_DATA", "helloworld.txt")) as f:
         data = f.read()
-    with open_tracer.start_active_span('/') as scope:
+    parent_span = tracing.get_span()
+    with open_tracer.start_active_span('/', child_of=parent_span) as scope:
         scope.span.set_tag('component', 'flask')
         response = make_response(render_template('docker_debug.j2',
                                                  colour=colour, data=data,
@@ -61,7 +63,8 @@ def index():
 @bp.route('/sleep/<count>')
 @tracing.trace()
 def sleep(count):
-    with open_tracer.start_active_span('/sleep') as scope:
+    parent_span = tracing.get_span()
+    with open_tracer.start_active_span('/sleep', child_of=parent_span) as scope:
         scope.span.set_tag('component', 'flask')
         scope.span.set_tag('sleep', count)
         time.sleep(int(count))
@@ -76,7 +79,8 @@ def sleep(count):
 @bp.route('/random/<code>/<percent>')
 @tracing.trace()
 def random_code(code, percent):
-    with open_tracer.start_active_span('/random') as scope:
+    parent_span = tracing.get_span()
+    with open_tracer.start_active_span('/random', child_of=parent_span) as scope:
         scope.span.set_tag('code', code)
         scope.span.set_tag('percent', percent)
         scope.span.set_tag('component', 'flask')
