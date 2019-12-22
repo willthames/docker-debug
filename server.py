@@ -11,8 +11,8 @@ import time
 from flask import Flask, render_template, make_response, request, session, Blueprint
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_socketio import close_room, rooms, disconnect
-from jaeger_client import Config
 from flask_opentracing import FlaskTracing
+import zipkin_ot
 
 
 DEBUG = bool(os.environ.get('DEBUG', False))
@@ -33,16 +33,12 @@ TRACING_HOST = os.environ.get('TRACING_HOST')
 TRACING_PORT = os.environ.get('TRACING_PORT')
 TRACING_SAMPLE_RATE = float(os.environ.get('TRACING_SAMPLE_RATE', 0))
 
-config = Config(config={'sampler': {'type': 'const', 'param': TRACING_SAMPLE_RATE},
-                        'logging': True,
-                        'propagation': 'b3',
-                        'local_agent':
-                        # Also, provide a hostname of Jaeger instance to send traces to.
-                        {'reporting_host': TRACING_HOST,
-                         'reporting_port': TRACING_PORT}},
-                # Service name can be arbitrary string describing this particular web service.
-                service_name="docker-debug")
-open_tracer = config.initialize_tracer()
+open_tracer = zipkin_ot.Tracer(
+    service_name='docker-debug',
+    collector_host=TRACING_HOST,
+    collector_port=TRACING_PORT,
+    verbosity=2,
+)
 tracing = FlaskTracing(open_tracer)
 
 @bp.route('/')
