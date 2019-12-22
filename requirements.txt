@@ -1,6 +1,6 @@
 flask==1.0.2
 Flask-SocketIO
 Flask-Opentracing
-jaeger-client
 python-socketio
 asyncio
+git+https://github.com/willthames/zipkin-python-opentracing@python3
