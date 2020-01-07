@@ -7,6 +7,7 @@ import os
 import random
 from threading import Lock
 import time
+import logging
 
 from flask import Flask, render_template, make_response, request, session, Blueprint
 from flask_socketio import SocketIO, emit, join_room, leave_room
@@ -40,6 +41,9 @@ config = Config(config={'sampler': {'type': 'const', 'param': TRACING_SAMPLE_RAT
                 service_name="docker-debug")
 open_tracer = config.initialize_tracer()
 tracing = FlaskTracing(open_tracer)
+# disable werkzeug request logs
+logging.getLogger('werkzeug').disabled = True
+
 
 @bp.route('/')
 @tracing.trace()
