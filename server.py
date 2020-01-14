@@ -12,6 +12,7 @@ from flask import Flask, render_template, make_response, request, session, Bluep
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_socketio import close_room, rooms, disconnect
 from flask_opentracing import FlaskTracing
+import opentracing
 import zipkin_ot
 
 DEBUG = bool(os.environ.get('DEBUG', False))
@@ -32,13 +33,18 @@ TRACING_HOST = os.environ.get('TRACING_HOST')
 TRACING_PORT = os.environ.get('TRACING_PORT')
 TRACING_SAMPLE_RATE = float(os.environ.get('TRACING_SAMPLE_RATE', 0))
 
-open_tracer = zipkin_ot.Tracer(
-    service_name='docker-debug',
-    collector_host=TRACING_HOST,
-    collector_port=TRACING_PORT,
-    verbosity=2,
-)
+if TRACING_HOST and TRACING_PORT:
+    open_tracer = zipkin_ot.Tracer(
+        service_name='docker-debug',
+        collector_host=TRACING_HOST,
+        collector_port=TRACING_PORT,
+        verbosity=2,
+    )
+else:
+    open_tracer = opentracing.Tracer()
+
 tracing = FlaskTracing(open_tracer)
+
 
 @bp.route('/')
 @tracing.trace()
