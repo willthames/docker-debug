@@ -8,22 +8,22 @@ workflows:
 
 jobs:
   build:
-    machine: true
-
+    docker:
+      - image: circleci/python:3.8.2
     steps:
       - checkout
-      - run:
-          name: Install submodule
-          command: git submodule update --init
+
+      - setup_remote_docker:
+          docker_layer_caching: true
 
       - run:
           name: "Build docker images"
           command: |
             VTAG="$(git describe --tags --long)"
             echo 'colour = "blue"' > colour.py
-            docker build ${DOCKER_REGISTRY}/${DOCKER_REPO}:blue-${VTAG} .
+            docker build -t ${DOCKER_REGISTRY}/${DOCKER_REPO}:blue-${VTAG} .
             echo 'colour = "green"' > colour.py
-            docker build ${DOCKER_REGISTRY}/${DOCKER_REPO}:green-${VTAG} .
+            docker build -t ${DOCKER_REGISTRY}/${DOCKER_REPO}:green-${VTAG} .
 
       - deploy:
           name: "Upload containers to registry"
