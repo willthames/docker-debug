@@ -5,7 +5,7 @@ EXPOSE 5000 5000
 CMD python /app/server.py
 WORKDIR /app
 COPY requirements.txt requirements.txt
-RUN apk add --no-cache --virtual .build-deps gcc libffi musl-dev && \
+RUN apk add --no-cache --virtual .build-deps gcc libffi musl-dev git && \
     pip install -r requirements.txt && \
     apk del .build-deps
 USER 1000
