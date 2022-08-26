@@ -203,4 +203,4 @@ def test_disconnect():
 
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', debug=DEBUG)
+    socketio.run(app, host='0.0.0.0', debug=DEBUG, allow_unsafe_werkzeug=True)
