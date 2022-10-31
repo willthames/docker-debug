@@ -1,6 +1,7 @@
-flask==2.0.3
+flask==2.2.2
 Flask-SocketIO
-Flask-Opentracing
 python-socketio
 asyncio
-git+https://github.com/willthames/zipkin-python-opentracing@python3
+opentelemetry-distro
+opentelemetry-instrumentation-flask
+opentelemetry-exporter-otlp

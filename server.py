@@ -3,6 +3,7 @@
 
 
 from colour import colour
+import opentelemetry
 import os
 import random
 from threading import Lock
@@ -12,15 +13,18 @@ import logging
 from flask import Flask, render_template, make_response, request, session, Blueprint
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_socketio import close_room, rooms, disconnect
-from flask_opentracing import FlaskTracing
-import opentracing
-import zipkin_ot
+from opentelemetry.instrumentation.flask import FlaskInstrumentor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 DEBUG = bool(os.environ.get('DEBUG', False))
 
 
 app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+FlaskInstrumentor().instrument_app(app)
 socketio = SocketIO(app, engineio_logger=DEBUG, logger=DEBUG)
 thread = None
 thread_lock = Lock()
@@ -32,70 +36,66 @@ bp = Blueprint('docker-debug', __name__,
 
 TRACING_HOST = os.environ.get('TRACING_HOST')
 TRACING_PORT = os.environ.get('TRACING_PORT')
-TRACING_SAMPLE_RATE = float(os.environ.get('TRACING_SAMPLE_RATE', 0))
+
+resource = Resource(attributes={
+    "service.name": "docker-debug"
+})
+
+opentelemetry.trace.set_tracer_provider(TracerProvider(resource=resource))
+tracer = opentelemetry.trace.get_tracer(__name__)
 
 if TRACING_HOST and TRACING_PORT:
-    open_tracer = zipkin_ot.Tracer(
-        service_name='docker-debug',
-        collector_host=TRACING_HOST,
-        collector_port=TRACING_PORT,
-        verbosity=2,
-    )
-else:
-    open_tracer = opentracing.Tracer()
+    otlp_exporter = OTLPSpanExporter(endpoint=f"http://{TRACING_HOST}:{TRACING_PORT}", insecure=True)
+    span_processor = BatchSpanProcessor(otlp_exporter)
+    opentelemetry.trace.get_tracer_provider().add_span_processor(span_processor)
 
-tracing = FlaskTracing(open_tracer)
 # disable werkzeug request logs
 logging.getLogger('werkzeug').disabled = True
 
 
+@app.before_request
+def log_request():
+    app.logger.debug(request.data or request.form)
+    return None
+
 
 @bp.route('/')
-@tracing.trace()
 def index():
     with open(os.environ.get("WWW_DATA", "helloworld.txt")) as f:
         data = f.read()
-    parent_span = tracing.get_span()
-    with open_tracer.start_active_span('/', child_of=parent_span) as scope:
-        scope.span.set_tag('component', 'flask')
-        response = make_response(render_template('docker_debug.j2',
-                                                 colour=colour, data=data,
-                                                 environs=os.environ,
-                                                 headers=request.headers))
-        response.headers['Cache-Control'] = 'max-age=0'
-        return response
+    response = make_response(render_template('docker_debug.j2',
+                                             colour=colour, data=data,
+                                             environs=os.environ,
+                                             headers=request.headers))
+    response.headers['Cache-Control'] = 'max-age=0'
+    return response
 
 
 @bp.route('/sleep/<count>')
-@tracing.trace()
 def sleep(count):
-    parent_span = tracing.get_span()
-    with open_tracer.start_active_span('/sleep', child_of=parent_span) as scope:
-        scope.span.set_tag('component', 'flask')
-        scope.span.set_tag('sleep', count)
-        time.sleep(int(count))
-        response = make_response(render_template('docker_debug.j2',
-                                                 colour=colour,
-                                                 environs=os.environ,
-                                                 headers=request.headers))
-        response.headers['Cache-Control'] = 'max-age=0'
-        return response
+    current_span = opentelemetry.trace.get_current_span()
+    current_span.set_attribute('sleep', count)
+    time.sleep(int(count))
+    response = make_response(render_template('docker_debug.j2',
+                                             colour=colour,
+                                             environs=os.environ,
+                                             headers=request.headers))
+    response.headers['Cache-Control'] = 'max-age=0'
+    return response
 
 
 @bp.route('/random/<code>/<percent>')
-@tracing.trace()
 def random_code(code, percent):
-    parent_span = tracing.get_span()
-    with open_tracer.start_active_span('/random', child_of=parent_span) as scope:
-        scope.span.set_tag('code', code)
-        scope.span.set_tag('percent', percent)
-        scope.span.set_tag('component', 'flask')
-        if int(percent) <= random.randint(1, 100):
-            result = ("Oh No!", int(code))
-        else:
-            result= ("Yay", 200)
-        response = make_response(*result)
-        return response
+    current_span = opentelemetry.trace.get_current_span()
+    current_span.set_attribute('code', code)
+    current_span.set_attribute('percent', percent)
+    current_span.set_attribute('component', 'flask')
+    if int(percent) <= random.randint(1, 100):
+        result = ("Oh No!", int(code))
+    else:
+        result = ("Yay", 200)
+    response = make_response(*result)
+    return response
 
 
 @bp.route('/ping')

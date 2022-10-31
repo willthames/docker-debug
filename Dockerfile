@@ -1,13 +1,12 @@
-FROM python:3.8.0-alpine3.10
+FROM python:3.11.0-slim-buster
 
 
-EXPOSE 5000 5000
+EXPOSE 6000 6000
 CMD python /app/server.py
 WORKDIR /app
 COPY requirements.txt requirements.txt
-RUN apk add --no-cache --virtual .build-deps gcc libffi musl-dev git && \
-    pip install -r requirements.txt && \
-    apk del .build-deps
+RUN apt update && apt upgrade -y && apt install -y g++ build-essential
+RUN pip install -r requirements.txt
 USER 1000
 COPY templates templates
 COPY server.py server.py
