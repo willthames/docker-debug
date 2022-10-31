@@ -1,37 +1,90 @@
 version: 2.1
+orbs:
+  skedulo: skedulo/ci@0.5.2
 
-workflows:
-  build:
-    jobs:
-      - build:
-          context: quay
+parameters:
+  image:
+    default: skedulo/docker-debug
+    type: string
 
 jobs:
-  build:
+  test:
     docker:
-      - image: circleci/python:3.8.2
+      - image: cimg/python:3.10.0
+
     steps:
+      - setup_remote_docker:
+          docker_layer_caching: true
+          version: 19.03.14
       - checkout
 
       - setup_remote_docker:
           docker_layer_caching: true
 
       - run:
-          name: "Build docker images"
+          name: Run python static analysis checks
           command: |
-            VTAG="$(git describe --tags --long)"
-            echo 'colour = "blue"' > colour.py
-            docker build -t ${DOCKER_REGISTRY}/${DOCKER_REPO}:blue-${VTAG} .
-            echo 'colour = "green"' > colour.py
-            docker build -t ${DOCKER_REGISTRY}/${DOCKER_REPO}:green-${VTAG} .
+            pip install flake8
+            flake8
 
-      - deploy:
-          name: "Upload containers to registry"
-          command: |
-            set -eu
-            if [ "$CIRCLE_BRANCH" = "master" ]; then
-                docker login -u $DOCKER_USER -p $DOCKER_PASS $DOCKER_REGISTRY
-                VTAG="$(git describe --tags --long)"
-                docker push ${DOCKER_REGISTRY}/${DOCKER_REPO}:blue-${VTAG}
-                docker push ${DOCKER_REGISTRY}/${DOCKER_REPO}:green-${VTAG}
-            fi
+workflows:
+  everything:
+    jobs:
+      - test
+      - skedulo/build_and_push_image:
+          name: build_image_<<matrix.executor>>
+          context:
+            - aws-ecr
+            - prisma
+          matrix:
+            parameters:
+              executor:
+                - skedulo/amd64
+                - skedulo/arm64
+          image: <<pipeline.parameters.image>>
+          push: false
+          use_buildkit: true
+          filters:
+            branches:
+              ignore:
+                - main
+          requires:
+            - test
+
+      - skedulo/build_and_push_image:
+          name: build_and_push_image_<<matrix.executor>>_<<matrix.colour>>
+          context:
+            - aws-ecr
+            - prisma
+          after_checkout:
+            - echo <<matrix.colour>> > color.py
+          matrix:
+            alias: build_and_push_image
+            parameters:
+              executor:
+                - skedulo/amd64
+                - skedulo/arm64
+              colour:
+                - blue
+                - green
+          image: <<pipeline.parameters.image>>-<<matrix.colour>>
+          use_buildkit: true
+          filters:
+            branches:
+              only:
+                - main
+          requires:
+            - test
+
+      - skedulo/create_and_push_manifest:
+          name: create_and_push_manifest
+          context: aws-ecr
+          images: <<pipeline.parameters.image>>-<<matrix.colour>>:${VERSION_TAG}-amd64,<<pipeline.parameters.image>>-<<matrix.colour>>:${VERSION_TAG}-arm64
+          matrix:
+            parameters:
+              colour:
+                - blue
+                - green
+          manifest: <<pipeline.parameters.image>>-<<matrix.colour>>
+          requires:
+            - build_and_push_image
