@@ -1,6 +1,6 @@
 version: 2.1
 orbs:
-  skedulo: skedulo/ci@0.5.2
+  skedulo: skedulo/ci@0.5.3
 
 parameters:
   image:
