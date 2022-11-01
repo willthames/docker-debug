@@ -55,7 +55,11 @@ logging.getLogger('werkzeug').disabled = True
 
 @app.before_request
 def log_request():
+    app.logger.debug('===================================================')
+    app.logger.debug(f'{request.method} {request.url}')
+    app.logger.debug(request.headers)
     app.logger.debug(request.data or request.form)
+    app.logger.debug('')
     return None
 
 
