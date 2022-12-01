@@ -94,7 +94,7 @@ def random_code(code, percent):
     current_span.set_attribute('code', code)
     current_span.set_attribute('percent', percent)
     current_span.set_attribute('component', 'flask')
-    if int(percent) <= random.randint(1, 100):
+    if int(percent) >= random.randint(1, 100):
         result = ("Oh No!", int(code))
     else:
         result = ("Yay", 200)
