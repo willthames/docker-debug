@@ -6,6 +6,7 @@ from colour import colour
 import opentelemetry
 import os
 import random
+import string
 from threading import Lock
 import time
 import logging
@@ -20,6 +21,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 DEBUG = bool(os.environ.get('DEBUG', False))
+PORT = int(os.environ.get('PORT', 5000))
 
 
 app = Flask(__name__)
@@ -86,6 +88,20 @@ def sleep(count):
                                              headers=request.headers))
     response.headers['Cache-Control'] = 'max-age=0'
     return response
+
+
+@bp.route('/size/<size>/<nchunks>')
+def size(size, nchunks):
+    chars = string.ascii_letters + string.digits + string.punctuation
+
+    def generate():
+        chunksize = int(size) // int(nchunks)
+        for _ in range(int(nchunks)):
+            yield "{}\n".format(''.join(random.choice(chars) for _ in range(chunksize - 1)))
+        yield "{}\n".format(''.join(random.choice(chars) for _ in range((size % chunksize)-1)))
+    current_span = opentelemetry.trace.get_current_span()
+    current_span.set_attribute('size', size)
+    return app.response_class(generate(), mimetype='text/plain')
 
 
 @bp.route('/random/<code>/<percent>')
@@ -207,4 +223,4 @@ def test_disconnect():
 
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', debug=DEBUG, allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', port=PORT, debug=DEBUG, allow_unsafe_werkzeug=True)
