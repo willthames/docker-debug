@@ -3,6 +3,7 @@
 
 
 from colour import colour
+from version import version
 import opentelemetry
 import os
 import random
@@ -122,6 +123,12 @@ def random_code(code, percent):
 def ping():
     response = make_response('pong')
     response.headers['Cache-Control'] = 'max-age=0'
+    return response
+
+
+@bp.route('/version')
+def version_response():
+    response = make_response(version)
     return response
 
 
