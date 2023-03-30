@@ -5,8 +5,7 @@ all: blue-push green-push
 colours = blue green
 
 $(colours):
-	echo 'colour = "$@"' > colour.py
-	docker build -t localhost:5000/docker-debug:$@ .
+	docker build -t --build-arg VERSION=${VERSION} --build-arg COLOUR=$@ localhost:5000/docker-debug:$@ .
 
 $(colours:%=%-push): %-push: %
 	docker push localhost:5000/docker-debug:$<

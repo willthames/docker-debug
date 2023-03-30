@@ -41,6 +41,7 @@ workflows:
                 - skedulo/arm64
           image: <<pipeline.parameters.image>>
           tag: blue-${VERSION_TAG}
+          extra_build_args: --build-arg VERSION=${VERSION_TAG} --build-arg COLOR=blue
           push: false
           use_buildkit: true
           filters:
@@ -65,6 +66,7 @@ workflows:
                 - skedulo/arm64
           image: <<pipeline.parameters.image>>
           tag: blue-${VERSION_TAG}
+          extra_build_args: --build-arg VERSION=${VERSION_TAG} --build-arg COLOR=blue
           use_buildkit: true
           filters:
             branches:
@@ -96,6 +98,7 @@ workflows:
                 - skedulo/arm64
           image: <<pipeline.parameters.image>>
           tag: green-${VERSION_TAG}
+          extra_build_args: --build-arg VERSION=${VERSION_TAG} --build-arg COLOR=green
           push: false
           use_buildkit: true
           filters:
@@ -119,6 +122,7 @@ workflows:
                 - skedulo/amd64
                 - skedulo/arm64
           image: <<pipeline.parameters.image>>
+          extra_build_args: --build-arg VERSION=${VERSION_TAG} --build-arg COLOR=green
           tag: green-${VERSION_TAG}
           use_buildkit: true
           filters:
