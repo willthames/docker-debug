@@ -5,3 +5,4 @@ asyncio
 opentelemetry-distro
 opentelemetry-instrumentation-flask
 opentelemetry-exporter-otlp
+opentelemetry-propagator-b3

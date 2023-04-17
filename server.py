@@ -21,7 +21,7 @@ from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExport
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.sdk.trace.propagation.b3_format import B3Format
+from opentelemetry.propagators.b3 import B3MultiFormat
 
 
 DEBUG = bool(os.environ.get('DEBUG', False))
@@ -56,7 +56,7 @@ if TRACING_HOST and TRACING_PORT:
     span_processor = BatchSpanProcessor(otlp_exporter)
     opentelemetry.trace.get_tracer_provider().add_span_processor(span_processor)
     if TRACING_HEADER_FORMAT == 'B3':
-        propagators.set_global_textmap(B3Format())
+        propagators.set_global_textmap(B3MultiFormat())
 
 # disable werkzeug request logs
 logging.getLogger('werkzeug').disabled = True
