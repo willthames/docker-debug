@@ -66,7 +66,7 @@ def log_request():
     return None
 
 
-@bp.route('/')
+@bp.route('/', methods=['GET', 'POST'])
 def index():
     with open(os.environ.get("WWW_DATA", "helloworld.txt")) as f:
         data = f.read()
@@ -78,7 +78,7 @@ def index():
     return response
 
 
-@bp.route('/sleep/<count>')
+@bp.route('/sleep/<count>', methods=['GET', 'POST'])
 def sleep(count):
     current_span = opentelemetry.trace.get_current_span()
     current_span.set_attribute('sleep', count)
@@ -91,7 +91,7 @@ def sleep(count):
     return response
 
 
-@bp.route('/size/<size>/<nchunks>')
+@bp.route('/size/<size>/<nchunks>', methods=['GET', 'POST'])
 def size(size, nchunks):
     chars = string.ascii_letters + string.digits + string.punctuation
 
@@ -105,7 +105,7 @@ def size(size, nchunks):
     return app.response_class(generate(), mimetype='text/plain')
 
 
-@bp.route('/random/<code>/<percent>')
+@bp.route('/random/<code>/<percent>', methods=['GET', 'POST'])
 def random_code(code, percent):
     current_span = opentelemetry.trace.get_current_span()
     current_span.set_attribute('code', code)
@@ -119,14 +119,14 @@ def random_code(code, percent):
     return response
 
 
-@bp.route('/ping')
+@bp.route('/ping', methods=['GET', 'POST'])
 def ping():
     response = make_response('pong')
     response.headers['Cache-Control'] = 'max-age=0'
     return response
 
 
-@bp.route('/version')
+@bp.route('/version', methods=['GET', 'POST'])
 def version_response():
     response = make_response(version)
     return response
